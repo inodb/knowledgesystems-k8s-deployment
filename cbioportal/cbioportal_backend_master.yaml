@@ -25,11 +25,30 @@ spec:
       labels:
         run: cbioportal-backend-master
     spec:
+      volumes:
+      - name: ehcache-config-volume
+        configMap:
+          name: ehcache-config
+      - name: portal-properties-volume
+        configMap:
+          name: public-portal-properties
+      - name: ehcache-volume
+        emptyDir: {}
       containers:
       - envFrom:
         - configMapRef:
             name: cbioportal-public
         image: cbioportal/cbioportal:master-web-shenandoah
+        env:
+        - name: PORTAL_HOME
+          value: /properties
+        volumeMounts:
+        - name: ehcache-config-volume
+          mountPath: /ehcache-config
+        - name: portal-properties-volume
+          mountPath: /properties
+        - name: ehcache-volume
+          mountPath: /ehcache
         command: [ "/usr/bin/java" ]
         args: [
             # from https://developers.redhat.com/blog/2017/04/04/openjdk-and-containers/
@@ -117,6 +136,14 @@ spec:
             "-Dsitemaps=false",
             "-Doncokb.public_api.url=https://oncokb.org/api/v1",
             "-Dgenomenexus.url=https://www.genomenexus.org",
+            "-Dehcache.cache_enabled=true",
+            "-Dehcache.xml_configuration=/ehcache-config/ehcache.xml",
+            "-Dehcache.statistics_enabled=true",
+            "-Dehcache.general_repository_cache.max_mega_bytes_heap=1024",
+            "-Dehcache.static_repository_cache_one.max_mega_bytes_heap=30",
+            "-Dehcache.persistence_path=/ehcache",
+            "-Dehcache.general_repository_cache.max_mega_bytes_local_disk=4096",
+            "-Dehcache.static_repository_cache_one.max_mega_bytes_local_disk=32",
             "-jar",
             "/webapp-runner.jar",
             # this addresses same issue as
